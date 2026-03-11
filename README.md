@@ -13,11 +13,16 @@ This project implements a deep learning model to classify currency notes from im
 ## ✨ Features
 
 - **Image Classification**: Automatically identifies different currency note denominations
-- **Data Augmentation**: Uses validation split for better model generalization
+- **Data Augmentation**: Training-only augmentation (rotation, shift, shear, zoom, horizontal flip) — no augmentation leak on validation/test data
+- **Separate Train / Val / Test Splits**: Clean evaluation using a dedicated test generator with no shuffling
+- **Regularization**: BatchNormalization after each Conv block and Dropout to combat overfitting
+- **Smart Training Callbacks**:
+  - `EarlyStopping` — restores best weights and stops when val_accuracy plateaus
+  - `ReduceLROnPlateau` — halves the learning rate when val_loss stagnates
 - **Visual Analysis**: 
   - Training/Validation accuracy and loss graphs
   - Confusion matrix visualization
-  - Sample predictions with confidence scores
+  - Sample predictions with colour-coded correct/incorrect labels
 - **Interactive Prediction**: Upload custom images to get real-time predictions
 - **Top-3 Predictions**: Shows the top 3 most likely classes with confidence percentages
 
@@ -80,20 +85,34 @@ Required libraries:
 ```
 Sequential CNN Model:
 ├── Conv2D (64 filters, 3x3, ReLU)
+├── BatchNormalization
 ├── MaxPooling2D (2x2)
 ├── Conv2D (128 filters, 3x3, ReLU)
+├── BatchNormalization
+├── MaxPooling2D (2x2)
+├── Conv2D (256 filters, 3x3, ReLU)
+├── BatchNormalization
 ├── MaxPooling2D (2x2)
 ├── Flatten
-├── Dense (64 units, ReLU)
+├── Dense (256 units, ReLU)
+├── Dropout (0.4)
 └── Dense (num_classes, Softmax)
 ```
 
 **Hyperparameters:**
 - Image Size: 128x128
 - Batch Size: 32
-- Epochs: 5
-- Optimizer: Adam
+- Epochs: up to 30 (EarlyStopping with patience=5)
+- Optimizer: Adam (with ReduceLROnPlateau, factor=0.5, patience=3)
 - Loss: Categorical Crossentropy
+
+**Data Augmentation (training only):**
+- Rotation range: 20°
+- Width / Height shift: 0.2
+- Shear range: 0.2
+- Zoom range: 0.2
+- Horizontal flip: enabled
+- Fill mode: nearest
 
 ---
 
@@ -101,20 +120,24 @@ Sequential CNN Model:
 
 ### Training the Model
 
-1. Mount Google Drive and extract dataset (Cells 1-2)
-2. Run the main training cell (Cell 3):
-   - Loads and preprocesses images
-   - Builds the CNN model
-   - Trains for 5 epochs
-   - Evaluates on test data
-   - Saves model as `money_model_v1.h5`
+1. Mount Google Drive (Cell 2)
+2. Extract the dataset (Cell 4):
+   - Unzips `Dataset.zip` from Google Drive to `/content/`
+3. Run the main training cell (Cell 5):
+   - Creates separate train, validation, and test generators
+   - Applies augmentation **only** to training data
+   - Builds the improved 3-block CNN with BatchNorm and Dropout
+   - Trains for up to 30 epochs with `EarlyStopping` and `ReduceLROnPlateau`
+   - Evaluates on the clean test set
+   - Displays accuracy/loss curves, confusion matrix, and sample predictions
+   - Saves model as `money_model_v2.h5` to Google Drive
 
 ### Making Predictions
 
-Run Cell 4 to:
+Run Cell 7 to:
 - Upload an image of a currency note
-- Get top-3 predictions with confidence scores
-- View visualization of predicted vs actual class
+- Get top-3 predictions with confidence scores and a bar chart
+- View visualization of the uploaded image alongside prediction probabilities
 
 ---
 
@@ -153,11 +176,11 @@ ACNR (Automated Currency Note Recognition)/
 
 ## 🔮 Future Improvements
 
-- [ ] Implement data augmentation (rotation, zoom, flip)
-- [ ] Add BatchNormalization and Dropout layers
-- [ ] Increase model depth (more Conv blocks)
-- [ ] Use learning rate scheduling
-- [ ] Train for more epochs
+- [x] Implement data augmentation (rotation, zoom, flip)
+- [x] Add BatchNormalization and Dropout layers
+- [x] Increase model depth (more Conv blocks)
+- [x] Use learning rate scheduling (ReduceLROnPlateau)
+- [x] Train for more epochs (up to 30 with EarlyStopping)
 - [ ] Implement transfer learning (VGG16, ResNet, etc.)
 - [ ] Create standalone Python scripts for deployment
 - [ ] Add real-time camera detection
@@ -191,5 +214,5 @@ For questions or suggestions, please open an issue in the repository.
 
 ---
 
-**Version:** 1.0.0  
-**Last Updated:** February 2026
+**Version:** 2.0.0  
+**Last Updated:** March 2026
